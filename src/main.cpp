@@ -61,22 +61,20 @@ void initVFS() {
  * @return std::vector<lemlibFile> contents of the index file
  */
 std::vector<lemlibFile> readFileIndex() {
-    // Initialize the vector
     std::vector<lemlibFile> index;
-    // Open the index file
+    // open the index file
     std::ifstream indexFile;
     indexFile.open("index.txt");
-    // throw an exception if the index file could not be opened
     if (!indexFile.is_open()) throw CANNOT_OPEN_FILE();
     // iterate through the index file
     for (std::string line; std::getline(indexFile, line);) {
-        // split the line into the name and the sector
         // the number after the last backslash is the sector
         std::string name = line.substr(0, line.find_last_of("/"));
         std::string sector = line.substr(line.find_last_of("/") + 1);
-        // add the file to the index
+        // push the file to the index
         index.push_back({name, sector});
     }
+    indexFile.close();
     return index;
 }
 
@@ -84,21 +82,19 @@ std::vector<lemlibFile> readFileIndex() {
  * @brief Get the Sector object
  *
  * @param path the path of the virtual file
- * @return const char* the sector the file is stored in, or null if the file is not found
+ * @return std::string the sector the file is stored in, or null if the file is not found
  */
-const char* getFileSector(const char* path) {
-    std::string filePath = path;
-    // if the path does not start with a slash, add one
-    if (filePath.find("/") != 0) filePath = "/" + filePath;
-    // Read the index file
+std::string getFileSector(std::string path) {
+    if (path.find("/") != 0) path = "/" + path;
+    // get the file index
     std::vector<lemlibFile> index = readFileIndex();
-    // Iterate through the index
+    // Iterate through files in the index
     for (const lemlibFile& file : index) {
         // Check if the name matches
-        if (file.name == filePath) return file.sector.c_str();
+        if (file.name == path) return file.sector;
     }
-    // Return null if the file is not found
-    return NULL;
+    // Return empty string if the file is not found
+    return "";
 }
 
 /**
@@ -107,25 +103,22 @@ const char* getFileSector(const char* path) {
  * @param dir the directory to list
  * @return std::vector <std::string> a vector of all the files and folders in the directory
  */
-std::vector<std::string> listDirectory(const char* dir, bool recursive = false) {
-    std::string directory = dir;
-    // if the path does not start with a slash, add one
-    if (directory.find("/") != 0) directory = "/" + directory;
-    // Initialize the vector
+std::vector<std::string> listDirectory(std::string dir, bool recursive = false) {
+    if (dir.find("/") != 0) dir = "/" + dir;
     std::vector<std::string> files;
     // Read the index file
     std::vector<lemlibFile> index = readFileIndex();
     // Iterate through the index
-    for (const lemlibFile& line : index) {
+    for (const lemlibFile line : index) {
         // Check if the name starts with the directory
-        if (line.name.find(directory) == std::string::npos) continue;
+        if (line.name.find(dir) == std::string::npos) continue;
         // remove the directory from the name
-        std::string name = line.name.substr(line.name.find(directory) + strlen(directory.c_str()));
+        std::string name = line.name.substr(line.name.find(dir) + strlen(dir.c_str()));
         // if there is a remaining slash, a directory is found
         if (name.find("/") != std::string::npos && !recursive) name = name.substr(0, name.find("/")) + "/";
         // push back the name, if it is not already in the vector
         bool found = false;
-        for (const std::string& file : files) {
+        for (const std::string file : files) {
             if (file == name) {
                 found = true;
                 break;
@@ -143,43 +136,28 @@ std::vector<std::string> listDirectory(const char* dir, bool recursive = false) 
  * @return true the file exists
  * @return false the file does not exist
  */
-bool fileExists(const char* path) {
-    std::string filePath = path;
-    // if the path does not start with a slash, add one
-    if (filePath.find("/") != 0) filePath = "/" + filePath;
-    // Read the index file
-    std::vector<lemlibFile> index = readFileIndex();
+bool fileExists(std::string path) {
+    if (path.find("/") != 0) path = "/" + path;
     // Iterate through the index
-    for (const lemlibFile& file : index) {
+    std::vector<lemlibFile> index = readFileIndex();
+    for (const lemlibFile file : index) {
         // Check if the name matches
-        if (file.name == filePath) return true;
+        if (file.name == path) return true;
     }
     return false;
 }
-
-/**
- * @brief Check if a file exists
- *
- * @param path path of the file
- * @return true the file exists
- * @return false the file does not exist
- */
-bool fileExists(std::string path) { return fileExists(path.c_str()); }
 
 /**
  * @brief delete a virtual file
  *
  * @param path the path of the virtual file
  */
-void deleteFile(const char* path) {
-    std::string filePath = path;
-    // if the path does not start with a slash, add one
-    if (filePath.find("/") != 0) filePath = "/" + filePath;
-    // check if the file exists
-    if (!fileExists(filePath)) throw FILE_NOT_FOUND();
+void deleteFile(std::string path) {
+    if (path.find("/") != 0) path = "/" + path;
+    if (!fileExists(path)) throw FILE_NOT_FOUND();
     // empty the sector the file is stored in
     std::ofstream sector;
-    sector.open(getFileSector(filePath.c_str()));
+    sector.open(getFileSector(path.c_str()));
     sector << "";
     sector.close();
     // remove the file from the index file
@@ -187,67 +165,46 @@ void deleteFile(const char* path) {
     std::ofstream indexFile;
     indexFile.open("index.txt");
     if (!indexFile.is_open()) throw CANNOT_OPEN_FILE();
-    for (const lemlibFile& line : index) {
-        if (line.name != filePath) indexFile << line.name << "/" << line.sector << std::endl;
+    for (const lemlibFile line : index) {
+        if (line.name != path) indexFile << line.name << "/" << line.sector << std::endl;
     }
     indexFile.close();
 }
 
 /**
- * @brief delete a virtual file
- *
- * @param path the path of the virtual file
- */
-void deleteFile(std::string path) { deleteFile(path.c_str()); }
-
-/**
  * @brief Create a virtual file
  *
  * @param path the path of the virtual file
- * @return const char* the sector the file is stored in
+ * @return std::string the sector the file is stored in
  */
-const char* createFile(const char* path, bool overwrite = true) {
-    std::string filePath = path;
-    // if the path does not start with a slash, add one
-    if (filePath.find("/") != 0) filePath = "/" + filePath;
+std::string createFile(std::string path, bool overwrite = true) {
+    if (path.find("/") != 0) path = "/" + path;
     // Create the file in the index file
     std::ofstream indexFile;
     indexFile.open("index.txt", std::ios_base::app);
     if (!indexFile.is_open()) throw CANNOT_OPEN_FILE();
     // Check if the file already exists
-    if (fileExists(filePath)) {
-        // If the file should be overwritten, delete the file
-        if (overwrite) deleteFile(filePath);
-        // Otherwise, throw an exception
+    if (fileExists(path)) {
+        if (overwrite) deleteFile(path);
         else throw FILE_ALREADY_EXISTS();
     }
     // Find the first empty sector
     std::vector<lemlibFile> index = readFileIndex();
     int sector = 0;
-    for (const lemlibFile& file : index) {
+    for (const lemlibFile file : index) {
         if (file.sector == std::to_string(sector)) sector++;
     }
     // Create the file
-    indexFile << filePath << "/" << sector << std::endl;
+    indexFile << path << "/" << sector << std::endl;
     indexFile.close();
     // create the sector file
     std::ofstream sectorFile;
-    // check if the sector file was created
-    if (!sectorFile.is_open()) throw CANNOT_OPEN_FILE();
     sectorFile.open(std::to_string(sector));
+    if (!sectorFile.is_open()) throw CANNOT_OPEN_FILE();
     sectorFile << "";
     sectorFile.close();
-    return std::to_string(sector).c_str();
+    return std::to_string(sector);
 }
-
-/**
- * @brief Create a virtual file
- *
- * @param path the path of the virtual file
- * @return const char* the sector the file is stored in
- */
-const char *createFile(std::string path, bool overwrite = true) { return createFile(path.c_str(), overwrite); }
-
 
 /**
  * @brief Main function
