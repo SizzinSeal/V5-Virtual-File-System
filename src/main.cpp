@@ -18,19 +18,6 @@
 // FILE_ALREADY_EXISTS
 // CANNOT_OPEN_FILE
 
-/**
- * @brief Convert a value to a string
- *
- * @tparam T
- * @param value value to convert
- * @return std::string
- */
-template <typename T> std::string to_string(T value) {
-    std::ostringstream os;
-    os << value;
-    return os.str();
-}
-
 typedef struct VFS_INIT_FAILED {} VFS_INIT_FAILED;
 
 typedef struct FILE_NOT_FOUND {} FILE_NOT_FOUND;
@@ -256,7 +243,7 @@ const char* createFile(const char* path, bool overwrite = true) {
     std::vector<lemlibFile> index = readFileIndex();
     int sector = 0;
     for (const lemlibFile& file : index) {
-        if (file.sector == to_string(sector)) sector++;
+        if (file.sector == std::to_string(sector)) sector++;
     }
     // Create the file
     indexFile << filePath << "/" << sector << std::endl;
@@ -265,10 +252,10 @@ const char* createFile(const char* path, bool overwrite = true) {
     std::ofstream sectorFile;
     // check if the sector file was created
     if (!sectorFile.is_open()) throw CANNOT_OPEN_FILE();
-    sectorFile.open(to_string(sector));
+    sectorFile.open(std::to_string(sector));
     sectorFile << "";
     sectorFile.close();
-    return to_string(sector).c_str();
+    return std::to_string(sector).c_str();
 }
 
 /**
