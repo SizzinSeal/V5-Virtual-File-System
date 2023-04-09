@@ -1,5 +1,6 @@
 /**
  * \file pros/optical.hpp
+ * \ingroup cpp-optical
  *
  * Contains prototypes for functions related to the VEX Optical sensor.
  *
@@ -9,11 +10,13 @@
  * This file should not be modified by users, since it gets replaced whenever
  * a kernel upgrade occurs.
  *
- * \copyright Copyright (c) 2017-2023, Purdue University ACM SIGBots.
+ * \copyright (c) 2017-2023, Purdue University ACM SIGBots.
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
+ * \defgroup cpp-optical VEX Optical Sensor C++ API
  */
 
 #ifndef _PROS_OPTICAL_HPP_
@@ -22,11 +25,21 @@
 #include <stdbool.h>
 
 #include <cstdint>
+#include <iostream>
 
 #include "pros/optical.h"
+#include "pros/device.hpp"
 
 namespace pros {
-class Optical {
+inline namespace v5 {
+/**
+ * \ingroup cpp-optical
+ */
+class Optical : public Device {
+	/**
+	 * \addtogroup cpp-optical
+	 *  @{
+	 */
 	public:
 	/**
 	 * Creates an Optical Sensor object for the given port.
@@ -40,8 +53,6 @@ class Optical {
 	 *        The V5 port number from 1-21
 	 */
 	explicit Optical(const std::uint8_t port);
-
-	explicit Optical(std::uint8_t port, double time);
 
 	/**
 	 * Get the detected color hue
@@ -221,46 +232,24 @@ class Optical {
 	 */
 	virtual std::int32_t disable_gesture();
 
-	/**
-	 * Set integration time (update rate) of the optical sensor in milliseconds, with
-	 * minimum time being 3 ms and maximum time being 712 ms. Default is 100 ms, with the 
-	 * optical sensor communciating with the V5 brain every 20 ms. 
-	 *
-	 * This function uses the following values of errno when an error state is
-	 * reached:
-	 * ENXIO - The given value is not within the range of V5 ports (1-21).
-	 * ENODEV - The port cannot be configured as an Optical Sensor
- 	 *
-	 * \return 1 if the operation is successful or PROS_ERR_F if the operation failed,
-	 * setting errno.
-	 */
-	double get_integration_time();
 
 	/**
-	 * Get integration time (update rate) of the optical sensor in milliseconds.
-	 *
-	 * This function uses the following values of errno when an error state is
-	 * reached:
-	 * ENXIO - The given value is not within the range of V5 ports (1-21).
-	 * ENODEV - The port cannot be configured as an Optical Sensor
-	 *
-	 * \param time
-	 *        The desired integration time in milliseconds
-	 * \return Integration time in milliseconds if the operation is successful 
-	 *  or PROS_ERR if the operation failed, setting errno.
+     * This is the overload for the << operator for printing to streams
+     *
+     * Prints in format(this below is all in one line with no new line):
+	 * Optical [port: (port number), hue: (hue), saturation: (saturation), 
+	 * brightness: (brightness), proximity: (proximity), rgb: {red, green, blue}]
 	 */
-	std::int32_t set_integration_time(double time);
-
-	/**
-	 * Gets the port number of the Optical Sensor.
-	 *
-	 * \return The Optical Sensor's port number.
-	 */
-	virtual std::uint8_t get_port();
-
+	friend std::ostream& operator<<(std::ostream& os, pros::Optical& optical);
+  
 	private:
-	const std::uint8_t _port;
+	///@}
 };
+
+namespace literals {
+const pros::Optical operator"" _opt(const unsigned long long int o);
+}  // namespace literals
+}
 }  // namespace pros
 
 #endif
